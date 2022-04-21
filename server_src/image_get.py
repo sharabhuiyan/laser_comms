@@ -40,7 +40,7 @@ def request_handler(request):
             return "Error: image is missing"
     image = load_color_image(f'/var/jail/home/team43/laser_comms/{image_}')
     data = [get_pixel(image, x, y) for x in range(image['width']) for y in range(image['height'])]
-    converted_data = rgb565_convert(data)
+    converted_data = rgb565_convert(data)[0:200]
     response = {'pixels': converted_data}
     return json.dumps(response)
     
