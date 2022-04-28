@@ -1,6 +1,4 @@
-//#include "support.ino"
 //#include <string.h>
-#include <mpu6050_esp32.h>
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <stdio.h>
@@ -10,7 +8,9 @@
 
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
-
+/*
+INIT CODE FROM IMAGE DISPLAY
+*/
 uint8_t channel = 11; //network channel on 2.4 GHz
 byte bssid[] = {0xD4, 0x20, 0xB0, 0x56, 0xB3, 0xE3}; //6 byte MAC address of AP you're targeting.
 
@@ -35,10 +35,31 @@ uint32_t width_count = 0; // use these to wrap around in loop to make sure we do
 int height_count = 0; // use these dimension variables to make sure that we are filling the screen properly, essentially a state variable that helps us check that our image has been fully uploaded
 bool new_image = true;
 bool using_chunks = false;
+bool sending = false;
+
+/*
+INIT CODE FROM ENCODE
+*/
+
+int x = 0;
+uint16_t timer;
+
+const int HEIGHT = 160;
+const int WIDTH = 128;
+const int size = 2*WIDTH;
+const int message_size = 2 * size + 8;
+uint8_t message[message_size] = { 0 };
+uint8_t data[size] = {0};
+int bit_count;
+
+
 
 void setup(void) {
 
   Serial.begin(115200);
+
+  analogReadResolution(12);
+  pinMode(11, OUTPUT); 
 
   tft.init();
   tft.setSwapBytes(true);
@@ -107,113 +128,118 @@ void int_extractor(char* data_array, int* output_values, char delimiter){
    }
 }
 
-uint16_t* deserialize(){
-   uint16_t curr_image[bitmap_array_size];
-   DynamicJsonDocument doc(6000);
-   DeserializationError error = deserializeJson(doc, response_buffer);
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-
-      Serial.println(error.f_str());
-    }
-    for (int i =0; i<128; i++){
-      // Serial.println(i);
-      char test [10] = ""; 
-      Serial.println(i);
-      strcpy(test, doc["pixels"][i]);
-      // Serial.println(test);
-      curr_image[i]= strtol(test, NULL, 16);
-      //Serial.println(curr_image[i]);
-    }
-    Serial.println("END SERIALIZAEFEJKFNEK");
-    return curr_image;
-}
 
 void loop() {
 
   // tft.pushImage(0, 0, 160, 128, image_bitmap);
   // tft.pushImage(20, 30, 160, 50, test_map);
   // tft.pushImage(0, 0, 160, 50, test_map);
-  if(new_image){
-    memset(request_buffer, 0, IN_BUFFER_SIZE);
-    sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?new_image=%s HTTP/1.1\r\n", image_file);
-    strcat(request_buffer, "Host: 608dev-2.net\r\n");
-    strcat(request_buffer,"\r\n"); //new line from header to body
-    do_http_request("608dev-2.net", request_buffer, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-    Serial.println("NEW IMAGE RES");
-    Serial.println(response_buffer);
-    // subArr = deserialize();
-    // Serial.println(subArr);
-    // for(int j =0; j<160; j++){
-    //   Serial.print(subArr[j]);
-    //   Serial.print(" ");
-    // }
+  if(!sending){
 
-  
-   memset(curr_image, 0, bitmap_array_size);    
-   DynamicJsonDocument doc(6000);
-   DeserializationError error = deserializeJson(doc, response_buffer);
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-
-      Serial.println(error.f_str());
-    }
-
-    for (int i =0; i<128; i++){
-      // Serial.println(i);
-      char test [10] = ""; 
-      strcpy(test, doc["pixels"][i]);
-      Serial.println(test);
-      curr_image[i]= strtol(test, NULL, 16);
-      // Serial.println(curr_image[i]);
-    }
-    Serial.println("END SERIALIZAEFEJKFNEK");
-
-    tft.pushImage(0, (int32_t)height_count, (int32_t)160, (int32_t)128, curr_image);
-    height_count++;
-    new_image = false;
-    using_chunks = true;
-  }
-  //IMP
-  else{
-    if(using_chunks){
+    if(new_image){
       memset(request_buffer, 0, IN_BUFFER_SIZE);
-      sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?chunk=%d HTTP/1.1\r\n", height_count);
+      sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?new_image=%s HTTP/1.1\r\n", image_file);
       strcat(request_buffer, "Host: 608dev-2.net\r\n");
       strcat(request_buffer,"\r\n"); //new line from header to body
       do_http_request("608dev-2.net", request_buffer, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+      Serial.println("NEW IMAGE RES");
       Serial.println(response_buffer);
-      memset(curr_image, 0, bitmap_array_size);    
+
+    
+      memset(curr_image, 0, bitmap_array_size); 
+      memset(data, 0, size);       
       DynamicJsonDocument doc(6000);
       DeserializationError error = deserializeJson(doc, response_buffer);
-        if (error) {
-          Serial.print(F("deserializeJson() failed: "));
-
-          Serial.println(error.f_str());
-        }
-
-        for (int i =0; i<128; i++){
-          // Serial.println(i);
-          char test [10] = ""; 
-          strcpy(test, doc["pixels"][i]);
-          // Serial.println(test);
-          curr_image[i]= strtol(test, NULL, 16);
-          // Serial.println(curr_image[i]);
-        }
-        Serial.println("END OTHERRRRRR");
-        Serial.println(height_count);
-      tft.pushImage(0, (int32_t)height_count, (int32_t)128, (int32_t)160, curr_image);
-      // for(int j =0; j<160; j++){
-      //   Serial.print(subArr[j]);
-      //   Serial.print(" ");
-      // }
-      height_count++;
-      if(height_count >= 160){
-        using_chunks = false;
-        height_count = 0;
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
       }
+
+      for (int i =0; i<128; i++){
+        // Serial.println(i);
+        char test [10] = ""; 
+        strcpy(test, doc["pixels"][i]);
+        Serial.println(test);
+        curr_image[i]= strtol(test, NULL, 16);
+        data[2*i] = (curr_image[i] >> 0) && 0xFF;
+        data[2*i+1] = (curr_image[i] >> 8) && 0xFF;
+        // Serial.println(curr_image[i]);
+      }
+      
+      tft.pushImage(0, (int32_t)height_count, (int32_t)128, (int32_t)1, curr_image);
+
+      memset(message, 0, message_size);
+      manchester_encode(message, data, size);
+
+      height_count++;
+      new_image = false;
+      using_chunks = true;
+    }
+    //IMP
+    else{
+      if(using_chunks){
+        memset(request_buffer, 0, IN_BUFFER_SIZE);
+        sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?chunk=%d HTTP/1.1\r\n", height_count);
+        strcat(request_buffer, "Host: 608dev-2.net\r\n");
+        strcat(request_buffer,"\r\n"); //new line from header to body
+        do_http_request("608dev-2.net", request_buffer, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+        Serial.println(response_buffer);
+        memset(curr_image, 0, bitmap_array_size);    
+        DynamicJsonDocument doc(6000);
+        DeserializationError error = deserializeJson(doc, response_buffer);
+          if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+
+            Serial.println(error.f_str());
+          }
+
+          for (int i =0; i<128; i++){
+            // Serial.println(i);
+            char test [10] = ""; 
+            strcpy(test, doc["pixels"][i]);
+            // Serial.println(test);
+            curr_image[i]= strtol(test, NULL, 16);
+            data[2*i] = (curr_image[i] >> 0) && 0xFF;
+            data[2*i+1] = (curr_image[i] >> 8) && 0xFF;
+            // Serial.println(curr_image[i]);
+          }
+          Serial.println(height_count);
+        tft.pushImage(0, (int32_t)height_count, (int32_t)128, (int32_t)1, curr_image);
+
+        memset(message, 0, message_size);
+        manchester_encode(message, data, size);
+        
+        // for(int j =0; j<160; j++){
+        //   Serial.print(subArr[j]);
+        //   Serial.print(" ");
+        // }
+        height_count++;
+        if(height_count >= 160){
+          using_chunks = false;
+          height_count = 0;
+        }
+      }
+      sending = true;
+      bit_count = 0;
     }
   }
+  else {
+    if (bit_count < 8*message_size) {
+      int bit = test_bit(message, bit_count);
+      if (bit == 1) {
+        one_signal(15);
+      } else {
+        zero_signal(15);
+      }
+      bit_count++;
+    }
+
+    if (bit_count >= 8*message_size) {
+      sending = false;
+    }
+
+  }
+}
 
   // if(height_count>=0 && height_count<128){ // LOCAL Version
   //   uint16_t subArr[160];
@@ -230,7 +256,6 @@ void loop() {
   //   // tft.fillScreen(TFT_BLACK);
   //   height_count = 0;
   // }
-}
 
 void get_subarray(uint16_t originalArray[], uint16_t subArray[], int n)
 {

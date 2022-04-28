@@ -31,7 +31,7 @@ char image_file[] = "tft_test_image.png";
 const int bitmap_array_size = 7700;
 uint16_t curr_image[bitmap_array_size];
 // uint16_t image_bitmap[bitmap_array_size];
-uint32_t width_count = 0; // use these to wrap around in loop to make sure we do not exceed the length of the screen 
+uint32_t width_count = 0; // use these to wrap around in loop to make sure we do not exceed the length of the screen
 int height_count = 0; // use these dimension variables to make sure that we are filling the screen properly, essentially a state variable that helps us check that our image has been fully uploaded
 bool new_image = true;
 bool using_chunks = false;
@@ -116,14 +116,14 @@ uint16_t* deserialize(){
 
       Serial.println(error.f_str());
     }
-
-    for (int i =0; i<160; i++){
+    for (int i =0; i<128; i++){
       // Serial.println(i);
-      char test [10] = ""; 
+      char test [10] = "";
+      Serial.println(i);
       strcpy(test, doc["pixels"][i]);
       // Serial.println(test);
       curr_image[i]= strtol(test, NULL, 16);
-      Serial.println(curr_image[i]);
+      //Serial.println(curr_image[i]);
     }
     Serial.println("END SERIALIZAEFEJKFNEK");
     return curr_image;
@@ -149,8 +149,8 @@ void loop() {
     //   Serial.print(" ");
     // }
 
-  
-   memset(curr_image, 0, bitmap_array_size);    
+
+   memset(curr_image, 0, bitmap_array_size);
    DynamicJsonDocument doc(6000);
    DeserializationError error = deserializeJson(doc, response_buffer);
     if (error) {
@@ -159,9 +159,9 @@ void loop() {
       Serial.println(error.f_str());
     }
 
-    for (int i =0; i<160; i++){
+    for (int i =0; i<128; i++){
       // Serial.println(i);
-      char test [10] = ""; 
+      char test [10] = "";
       strcpy(test, doc["pixels"][i]);
       Serial.println(test);
       curr_image[i]= strtol(test, NULL, 16);
@@ -169,7 +169,7 @@ void loop() {
     }
     Serial.println("END SERIALIZAEFEJKFNEK");
 
-    tft.pushImage(0, (int32_t)height_count, (int32_t)160, (int32_t)128, curr_image);
+    tft.pushImage(0, (int32_t)height_count, (int32_t)128, (int32_t)160, curr_image);
     height_count++;
     new_image = false;
     using_chunks = true;
@@ -183,7 +183,7 @@ void loop() {
       strcat(request_buffer,"\r\n"); //new line from header to body
       do_http_request("608dev-2.net", request_buffer, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
       Serial.println(response_buffer);
-      memset(curr_image, 0, bitmap_array_size);    
+      memset(curr_image, 0, bitmap_array_size);
       DynamicJsonDocument doc(6000);
       DeserializationError error = deserializeJson(doc, response_buffer);
         if (error) {
@@ -192,9 +192,9 @@ void loop() {
           Serial.println(error.f_str());
         }
 
-        for (int i =0; i<160; i++){
+        for (int i =0; i<128; i++){
           // Serial.println(i);
-          char test [10] = ""; 
+          char test [10] = "";
           strcpy(test, doc["pixels"][i]);
           // Serial.println(test);
           curr_image[i]= strtol(test, NULL, 16);
@@ -202,13 +202,13 @@ void loop() {
         }
         Serial.println("END OTHERRRRRR");
         Serial.println(height_count);
-      tft.pushImage(0, (int32_t)height_count, (int32_t)160, (int32_t)128, curr_image);
+      tft.pushImage(0, (int32_t)height_count, (int32_t)128, (int32_t)160, curr_image);
       // for(int j =0; j<160; j++){
       //   Serial.print(subArr[j]);
       //   Serial.print(" ");
       // }
       height_count++;
-      if(height_count >= 128){
+      if(height_count >= 160){
         using_chunks = false;
         height_count = 0;
       }
@@ -239,5 +239,3 @@ void get_subarray(uint16_t originalArray[], uint16_t subArray[], int n)
         subArray[i] = originalArray[i];
     }
 }
-
-
