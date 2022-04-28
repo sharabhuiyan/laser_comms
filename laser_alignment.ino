@@ -48,11 +48,11 @@ void setup() {
 void loop() {
   // CHANGE PIN NUMBERS AFTER HARDWARE SETUP
   
-  float vout0 = analogRead(5)*(3.3/4096.0); // middle photosensor
-  float vout1 = analogRead(3)*(3.3/4096.0); // left2 photosensor
-  float vout2 = analogRead(4)*(3.3/4096.0); // left1 photosensor
-  float vout3 = analogRead(6)*(3.3/4096.0); // right1 photosensor
-  float vout4 = analogRead(7)*(3.3/4096.0); // right2 photosensor
+  float vout0 = analogRead(8)*(3.3/4096.0); // middle photosensor
+  float vout1 = analogRead(6)*(3.3/4096.0); // left2 photosensor
+  float vout2 = analogRead(7)*(3.3/4096.0); // left1 photosensor
+  float vout3 = analogRead(9)*(3.3/4096.0); // right1 photosensor
+  float vout4 = analogRead(10)*(3.3/4096.0); // right2 photosensor
 
   float lux0 = brightnessExtractor(vout0);
   float lux1 = brightnessExtractor(vout1);
