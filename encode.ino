@@ -1,4 +1,3 @@
-#include<string.h>
 #include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 #include <SPI.h>
 #include "dome_image.h"
@@ -8,10 +7,19 @@ TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 int x = 0;
 uint16_t timer;
 
-const int size = sizeof test_2_image / sizeof test_2_image[0];
-const int message_size = 2 * size + 8;
+const int IMAGE_SIZE = 128*128;
+const int size = 16; //sizeof test_3_image / sizeof test_3_image[0];
+const int SEQ_SIZE = 8;
+const int message_size = 2 * size + SEQ_SIZE;
 uint8_t message[message_size] = { 0 };
+uint8_t PROGMEM image_chunk[size] = { 0 };
 int bit_count;
+int buffer_start;
+int buffer_end;
+int chunk_count;
+
+enum transmission_state{GET_IMAGE, DELAY1, TRANSMIT, DELAY2};
+enum transmission_state state;
 
 
 void set_bit(uint8_t* A, int k) {
@@ -60,20 +68,45 @@ int test_bit(uint8_t* A, int k) {
   }
 };
 
+void next_chunk(uint8_t* image_chunk) {
+  if (buffer_end <= IMAGE_SIZE) {
+    int counter = 0;
+    for (int i = buffer_start; i < buffer_end; i++) {
+      image_chunk[counter] = mit_608_dome[i];
+      counter++;
+    }
+    buffer_start += 16;
+    buffer_end += 16;
+  }
+};
 
-void manchester_encode() {
-  // add synchronizing pattern & ending pattern 
-  message[0] = 0xFF; message[1] = 0x00; message[2] = 0xFF; message[3] = 0x00;
-  message[message_size-4] = 0x00; message[message_size-3] = 0xFF;
-  message[message_size-2] = 0x00; message[message_size-1] = 0xFF;
+
+void manchester_encode(uint8_t* message, uint8_t* image_chunk) {
 
   // encode rest of bits
   int num_bits = 8*size;
-  int offset = 32;
-  // loop through every bit in image
+  int offset = SEQ_SIZE*4;
+
+  // add synchronizing pattern
+  if (test_bit(image_chunk, 0) == 0) {
+    message[0] = 0x00; message[1] = 0xFF; message[2] = 0x00; message[3] = 0xFF;
+  } else {
+    message[0] = 0xFF; message[1] = 0x00; message[2] = 0xFF; message[3] = 0x00;
+  }
+
+  // add ending pattern
+  if (test_bit(image_chunk, (int)(num_bits-1)) == 0) {
+    message[message_size-4] = 0x00; message[message_size-3] = 0xFF;
+    message[message_size-2] = 0x00; message[message_size-1] = 0xFF;
+  } else {
+    message[message_size-4] = 0xFF; message[message_size-3] = 0x00;
+    message[message_size-2] = 0xFF; message[message_size-1] = 0x00;
+  } 
+
+  // loop through every bit in image chunk
   for (int k = 0; k < num_bits; k++) {
     // check bit 
-    int bit = test_bit(test_2_image, k);
+    int bit = test_bit(image_chunk, k);
     // encode bit in message
     if (bit == 1) {
       set_bit(message, 2*k + offset);
@@ -101,41 +134,18 @@ void setup() {
 
   pinMode(11, OUTPUT); 
 
-  tft.drawXBitmap(0, 30, test_2_image, test_2_width, test_2_height, TFT_RED);
+  // tft.drawXBitmap(0, 30, mit_608_dome, 128, 128, TFT_RED);
+  // display_bitmap(0, mit_608_dome);
 
-  // encode image
-  memset(message, 0, sizeof(message)); // for automatically-allocated arrays
-  manchester_encode();
-
-  // Serial.println("original image");
-  // Serial.println(test_2_image);
-  
-  // Serial.println("encoded image");
-  // Serial.println(message);
-
-  Serial.println("original image");
-  for(int i = 0; i < size; i++) {
-    printf("%d ", test_2_image[i]);
-  }
-  printf("\n");
-  for(int i = 0; i < 8*size; i++) {
-    printf("%d ", test_bit(test_2_image,i));
-  }
-  printf("\n");
-
-  Serial.println("encoded image");
-  for(int i = 0; i < message_size; i++) {
-    printf("%d ", message[i]);
-  }
-  printf("\n");
-  for(int i = 0; i < 8*message_size; i++) {
-    printf("%d ", test_bit(message,i));
-  }
-  printf("\n");
 
   bit_count = 0;
-
   timer = millis();
+
+  buffer_start = 0;
+  buffer_end = 16;
+  chunk_count = 0;
+  
+  state = GET_IMAGE;
 
 }
 
@@ -176,70 +186,79 @@ void send_synch_seq() {
 
 
 void loop() {
-  // // receiver
-  // float photosensor = analogRead(6);
-  // float actual_v = photosensor * 3.3 / 4096;
 
-  // turn on laser for some time for alignment
-
-  // if (millis() - timer < 5 && bit_count < 8*message_size) {
-  //   one_signal(1);
-  // }
-
+  
   // one_signal(1);
   // zero_signal(1);
 
-  // SEND SYNCHRONIZING SEQUENCE
 
-  // while (bit_count < 32) {
-  //   if (bit_count < 8) {
-  //     Serial.println("first 16 bits");
-  //     one_signal(15);
-  //   } else if (bit_count < 16) {
-  //     Serial.println("second 16 bits");
-  //     zero_signal(15);
-  //   } else if (bit_count < 24) {
-  //     Serial.println("third 16 bits");
-  //     one_signal(15);
-  //   } else if (bit_count < 32) {
-  //     Serial.println("last 16 bits");
-  //     zero_signal(15);
-  //   }
-  //   bit_count++;
-  // }
-  // Serial.print(".");
-  // zero_signal(1);
-  // bit_count++;
+  switch(state) {
+    case GET_IMAGE:
 
-  // if (bit_count > 3000) {
-  //   Serial.println();
-  //   bit_count = 0;
-  // }
+      // Encode image
+      memset(message, 0, sizeof(message)); // for automatically-allocated arrays
+      memset(image_chunk, 0, sizeof(size));
+      
+      next_chunk(image_chunk);
+      tft.drawXBitmap(0, 30+chunk_count, image_chunk, 128, 1, TFT_RED);
 
-  // one_signal(5);
-  // zero_signal(5);
+      
+      manchester_encode(message, image_chunk);
 
+      // Print images 
+      Serial.println("image chunk");
+      for(int i = 0; i < size; i++) {
+        printf("%d ", image_chunk[i]);
+      }
+      printf("\n");
+      // for(int i = 0; i < 8*size; i++) {
+      //   printf("%d ", test_bit(image_chunk,i));
+      // }
+      // printf("\n");
 
-  // emitter
-  if (bit_count < 8*message_size) {
-    int bit = test_bit(message, bit_count);
-    if (bit == 1) {
-      one_signal(15);
-    } else {
-      zero_signal(15);
-    }
-    bit_count++;
+      Serial.println("encoded image");
+      for(int i = 0; i < message_size; i++) {
+        printf("%d ", message[i]);
+      }
+      printf("\n");
+      // for(int i = 0; i < 8*message_size; i++) {
+      //   printf("%d ", test_bit(message,i));
+      // }
+      // printf("\n");
+
+      bit_count = 0;
+      chunk_count++;
+
+      state = TRANSMIT;
+      break;
+    case DELAY1:
+      delay(300);
+      state = TRANSMIT;
+      break;
+    case TRANSMIT:
+
+      // emitter
+      if (bit_count < 8*message_size) {
+        int bit = test_bit(message, bit_count);
+        if (bit == 1) { one_signal(5); }
+        else { zero_signal(5); }
+        bit_count++;
+      }
+
+      // SEND 0 AFTER MESSAGE FINISHED
+      if (bit_count >= 8*message_size) {
+        zero_signal(1);
+        state = DELAY2;
+      }
+
+      break;
+    case DELAY2:
+      delay(2000);
+      state = GET_IMAGE;
+      break;
   }
 
-  if (bit_count >= 8*message_size) {
-    zero_signal(1);
-  }
-  //   // resend after 1 seconds
-  //   if (millis() - timer > 10000) {
-  //     bit_count = 0;
-  //     timer = millis();
-  //   }
-  // }
+
 
 
 }
