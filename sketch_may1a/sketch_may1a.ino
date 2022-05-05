@@ -6,14 +6,19 @@ TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 #define RXD1 9
 #define TXD1 10
 
-byte byte_read;
+byte byte1_read;
+byte byte2_read;
 
 int i;
 int chunk_count;
-const int IMAGE_SIZE = 128 * 128;
-const int num_chunks = 16
-const int BUFFER_MAX = 16 * num_chunks;
-uint8_t PROGMEM image[BUFFER_MAX] = { 0 };
+const int num_chunks = 16;
+
+const int HEIGHT = 160;
+const int WIDTH = 128;
+const int size = 2*WIDTH;
+
+const int BUFFER_MAX = 32;
+uint16_t image[BUFFER_MAX] = { 0 };
 
 
 
@@ -57,22 +62,23 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if (Serial1.available() > 2){ 
-    byte_read = reverse(Serial1.read());
+    byte1_read = reverse(Serial1.read());
+    byte2_read = reverse(Serial1.read());
     // Serial.println(byte_read, HEX);
     // Serial.print("0b");
     // for (int i = 0; i < 8; i++) {
     //   Serial.print(test_bit(byte_read,i));
     // }
     // Serial.println();
-
-    image[i] = byte_read;
+    uint16_t pixel = (byte1_read << 8) + (uint16_t)byte2_read;
+    image[i] = pixel;
     i++;
 
   } 
 
   if (i >= BUFFER_MAX) {
-    tft.drawXBitmap(0, 30+chunk_count, image, 128, num_chunks, TFT_RED);
-    chunk_count += num_chunks;
+    tft.pushImage((int32_t)(chunk_count%4), (int32_t)(chunk_count/4), (int32_t)32, (int32_t)1, image);
+    chunk_count += 1;
     i = 0;
 
   }

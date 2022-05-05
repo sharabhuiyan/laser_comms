@@ -229,7 +229,7 @@ void loop() {
       bit_count = 0;
       chunk_count++;
 
-      state = TRANSMIT;
+      state = DELAY1;
       break;
     case DELAY1:
       delay(300);
