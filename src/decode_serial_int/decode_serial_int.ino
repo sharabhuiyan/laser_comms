@@ -50,8 +50,8 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
-  Serial.begin(9600, SERIAL_8N1); // initialize UART with baud rate of 9600 bps
-  Serial1.begin(9600, SERIAL_8N1, RXD1, TXD1);
+  Serial.begin(2400, SERIAL_8N1); // initialize UART with baud rate of 9600 bps
+  Serial1.begin(2400, SERIAL_8N1, RXD1, TXD1);
   Serial1.flush();
 
   i = 0;
@@ -62,22 +62,22 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if (Serial1.available() > 2){ 
-    byte1_read = reverse(Serial1.read());
-    byte2_read = reverse(Serial1.read());
-    // Serial.println(byte_read, HEX);
+    byte2_read = Serial1.read();
+    byte1_read = Serial1.read();
     // Serial.print("0b");
     // for (int i = 0; i < 8; i++) {
     //   Serial.print(test_bit(byte_read,i));
     // }
     // Serial.println();
-    uint16_t pixel = (byte1_read << 8) + (uint16_t)byte2_read;
+    uint16_t pixel = ((((uint16_t)byte1_read) << 8) & 0xFF00) + ((uint16_t)byte2_read & 0x00FF);
+    Serial.println(pixel, HEX);
     image[i] = pixel;
     i++;
 
   } 
 
   if (i >= BUFFER_MAX) {
-    tft.pushImage((int32_t)(chunk_count%4), (int32_t)(chunk_count/4), (int32_t)32, (int32_t)1, image);
+    tft.pushImage((int32_t)(32*(chunk_count%4)), (int32_t)(chunk_count/4), (int32_t)32, (int32_t)1, image);
     chunk_count += 1;
     i = 0;
 

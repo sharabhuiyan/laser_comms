@@ -63,8 +63,8 @@ enum transmission_state state;
 
 void setup(void) {
 
-  Serial.begin(115200);
-  Serial1.begin(9600, SERIAL_8N1, RXD1, TXD1);
+  Serial.begin(2400, SERIAL_8N1);
+  Serial1.begin(2400, SERIAL_8N1, RXD1, TXD1);
 
   analogReadResolution(12);
   pinMode(11, OUTPUT); 
@@ -139,13 +139,75 @@ void loop() {
   // tft.pushImage(0, 0, 160, 50, test_map);
   if(state == GET_IMAGE){
 
+//    if (new_image || using_chunks) {
+//      memset(request_buffer, 0, IN_BUFFER_SIZE);
+//      
+//      if (new_image) {
+//        sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?new_image=%s HTTP/1.1\r\n", image_file);
+//      } else {
+//        sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?chunk=%d HTTP/1.1\r\n", height_count);
+//      }
+//
+//      strcat(request_buffer, "Host: 608dev-2.net\r\n");
+//      strcat(request_buffer,"\r\n"); //new line from header to body
+//      do_http_request("608dev-2.net", request_buffer, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
+//      //Serial.println("NEW IMAGE RES");
+//      Serial.println(response_buffer);
+//
+//    
+//      memset(curr_image, 0, 32); 
+//      DynamicJsonDocument doc(6000);
+//      DeserializationError error = deserializeJson(doc, response_buffer);
+//      if (error) {
+//        Serial.print(F("deserializeJson() failed: "));
+//        Serial.println(error.f_str());
+//      }
+//      memset(data, 0, 64);
+//      for (int i =0; i<32; i++){
+//        // Serial.println(i);
+//        char test [10] = ""; 
+//        strcpy(test, doc["pixels"][i]);
+//        //Serial.println(test);
+//        curr_image[i]= strtol(test, NULL, 16);
+//        Serial.println(curr_image[i], HEX);
+//        data[2*i] = (uint8_t)(curr_image[i] >> 8);
+//        data[2*i+1] = (uint8_t)(curr_image[i] & 0x00FF);
+//        Serial.println(data[2*i], HEX);
+//        Serial.println(data[2*i+1], HEX);
+//        Serial.println();
+//        // Serial.println(curr_image[i]);
+//      }
+//      memset(curr_image, 0, 32); 
+//      for (int i=0; i<32; i++) {
+//        curr_image[i] = ((uint16_t)data[2*i] << 8) + (uint16_t)data[2*i+1];
+//      }
+//      tft.pushImage((int32_t)(32*(height_count%4)), (int32_t)(height_count/4), (int32_t)32, (int32_t)1, curr_image);
+//
+//      if (new_image) {
+//        height_count++;
+//        new_image = false;
+//        using_chunks = true;
+//      } else {
+//        height_count++;
+//        if(height_count >= 640){
+//          using_chunks = false;
+//          height_count = 0;
+//        }
+//      }
+//
+//      state = DELAY1;
+//      bit_count = 0;
+//      
+//    }
+//    
+
     if(new_image){
       memset(request_buffer, 0, IN_BUFFER_SIZE);
       sprintf(request_buffer, "GET http://608dev-2.net/sandbox/sc/team43/laser_comms/send_image.py?new_image=%s HTTP/1.1\r\n", image_file);
       strcat(request_buffer, "Host: 608dev-2.net\r\n");
       strcat(request_buffer,"\r\n"); //new line from header to body
       do_http_request("608dev-2.net", request_buffer, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, false);
-      Serial.println("NEW IMAGE RES");
+      //Serial.println("NEW IMAGE RES");
       Serial.println(response_buffer);
 
     
@@ -161,14 +223,21 @@ void loop() {
         // Serial.println(i);
         char test [10] = ""; 
         strcpy(test, doc["pixels"][i]);
-        Serial.println(test);
+        //Serial.println(test);
         curr_image[i]= strtol(test, NULL, 16);
-        data[2*i] = (curr_image[i] >> 8) && 0xFF;
-        data[2*i+1] = (curr_image[i] >> 0) && 0xFF;
+        Serial.println(curr_image[i], HEX);
+        data[2*i] = (uint8_t)(curr_image[i] >> 8);
+        data[2*i+1] = (uint8_t)(curr_image[i] & 0x00FF);
+        Serial.println(data[2*i], HEX);
+        Serial.println(data[2*i+1], HEX);
+        Serial.println();
         // Serial.println(curr_image[i]);
       }
-      
-      tft.pushImage((int32_t)(height_count%4), (int32_t)(height_count/4), (int32_t)32, (int32_t)1, curr_image);
+      memset(curr_image, 0, 32); 
+      for (int i=0; i<32; i++) {
+        curr_image[i] = ((uint16_t)data[2*i] << 8) + (uint16_t)data[2*i+1];
+      }
+      tft.pushImage((int32_t)(32*(height_count%4)), (int32_t)(height_count/4), (int32_t)32, (int32_t)1, curr_image);
 
       // memset(message, 0, message_size);
       // message = data;
@@ -192,7 +261,6 @@ void loop() {
         DeserializationError error = deserializeJson(doc, response_buffer);
           if (error) {
             Serial.print(F("deserializeJson() failed: "));
-
             Serial.println(error.f_str());
           }
           memset(data, 0, 64);
@@ -202,12 +270,20 @@ void loop() {
             strcpy(test, doc["pixels"][i]);
             // Serial.println(test);
             curr_image[i]= strtol(test, NULL, 16);
-            data[2*i] = (curr_image[i] >> 8) && 0xFF;
-            data[2*i+1] = (curr_image[i] >> 0) && 0xFF;
+            Serial.println(curr_image[i], HEX);
+            data[2*i] = (uint8_t)(curr_image[i] >> 8);
+            data[2*i+1] = (uint8_t)(curr_image[i] & 0x00FF);
+            Serial.println(data[2*i], HEX);
+            Serial.println(data[2*i+1], HEX);
+            Serial.println();
             // Serial.println(curr_image[i]);
           }
-          Serial.println(height_count);
-        tft.pushImage((int32_t)(height_count%4), (int32_t)(height_count/4), (int32_t)32, (int32_t)1, curr_image);
+          //Serial.println(height_count);
+        memset(curr_image, 0, 32); 
+        for (int i=0; i<32; i++) {
+          curr_image[i] = ((uint16_t)data[2*i] << 8) + (uint16_t)data[2*i+1];
+        }
+        tft.pushImage((int32_t)(32*(height_count%4)), (int32_t)(height_count/4), (int32_t)32, (int32_t)1, curr_image);
 
         // memset(message, 0, message_size);
         // message = data;
@@ -228,7 +304,7 @@ void loop() {
     }
   }
   else if (state == DELAY1) {
-    delay(300);
+//    delay(300);
     state = TRANSMIT;
   }
   else if (state == TRANSMIT){
@@ -246,15 +322,12 @@ void loop() {
     //   zero_signal(1);
     //   state = DELAY2;
     // 
-    for(int i = 0; i < 4; i++){
-      Serial1.write(data, 64);
-      delay(300);
-    }
+    Serial1.write(data, 64);
     state = DELAY2;
 
   }
   else if (state == DELAY2){
-    delay(300);
+//    delay(300);
     state = GET_IMAGE;
   }
 }
@@ -282,5 +355,3 @@ void get_subarray(uint16_t originalArray[], uint16_t subArray[], int n)
         subArray[i] = originalArray[i];
     }
 }
-
-
