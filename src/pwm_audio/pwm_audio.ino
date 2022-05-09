@@ -10,12 +10,12 @@ TFT_eSPI tft = TFT_eSPI();
 
 uint8_t channel = 11; //network channel on 2.4 GHz
 byte bssid[] = {0xD4, 0x20, 0xB0, 0x56, 0xB3, 0xE3}; //6 byte MAC address of AP you're targeting.
-int SONG_LENGTH = 840; // length of notes list being sent down (chnages from song to song)
+const int SONG_LENGTH = 840; // length of notes list being sent down (chnages from song to song)
 float curr_sounds[SONG_LENGTH];
 float song_note_period = 150; //changes from song to song but 150 should be decent for most sounds (can easily look up for other songs)
 
 
-const char network[] = "RLE";
+const char network[] = "EECS_Labs";
 const char password[] = "";
 
 bool new_song = true;
