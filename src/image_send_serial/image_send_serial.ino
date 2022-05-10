@@ -39,6 +39,14 @@ bool new_image = true;
 bool using_chunks = false;
 bool sending = false;
 
+byte buf[] = { 0b00000000 };
+byte starting_sequence[] = { 0b11110000, 0b11110000 };
+byte final_padding[] = { 0b00000000, 0b00000000, 0b00000000, 0b00000000 };
+
+
+int started;
+int ended;
+
 /*
 INIT CODE FROM ENCODE
 */
@@ -306,6 +314,7 @@ void loop() {
   else if (state == DELAY1) {
 //    delay(300);
     state = TRANSMIT;
+    ended = 0;
   }
   else if (state == TRANSMIT){
     // if (bit_count < 8*message_size) {
@@ -322,13 +331,22 @@ void loop() {
     //   zero_signal(1);
     //   state = DELAY2;
     // 
+    if (!started) {
+        Serial1.write(starting_sequence, 2);
+        started = 1;
+      }
     Serial1.write(data, 64);
     state = DELAY2;
 
   }
   else if (state == DELAY2){
 //    delay(300);
+    if (!ended) {
+      Serial1.write(final_padding, 4);
+      ended = 1;
+    }
     state = GET_IMAGE;
+    started = 0;
   }
 }
 

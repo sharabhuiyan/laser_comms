@@ -20,6 +20,8 @@ const int size = 2*WIDTH;
 const int BUFFER_MAX = 32;
 uint16_t image[BUFFER_MAX] = { 0 };
 
+byte starting_sequence[] = { 0b11111111, 0b00000000 };
+int started;
 
 
 int test_bit(byte b, int pos) {
@@ -56,24 +58,37 @@ void setup() {
 
   i = 0;
   chunk_count = 0;
+  started = 0;
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   if (Serial1.available() > 2){ 
-    byte2_read = Serial1.read();
-    byte1_read = Serial1.read();
-    // Serial.print("0b");
-    // for (int i = 0; i < 8; i++) {
-    //   Serial.print(test_bit(byte_read,i));
-    // }
-    // Serial.println();
-    uint16_t pixel = ((((uint16_t)byte1_read) << 8) & 0xFF00) + ((uint16_t)byte2_read & 0x00FF);
-    Serial.println(pixel, HEX);
-    image[i] = pixel;
-    i++;
-
+    if(started) {
+      byte2_read = Serial1.read();
+      byte1_read = Serial1.read();
+      // Serial.print("0b");
+      // for (int i = 0; i < 8; i++) {
+      //   Serial.print(test_bit(byte_read,i));
+      // }
+      // Serial.println();
+      uint16_t pixel = ((((uint16_t)byte1_read) << 8) & 0xFF00) + ((uint16_t)byte2_read & 0x00FF);
+      Serial.println(pixel, HEX);
+      image[i] = pixel;
+      i++;
+    }
+    else {
+      byte1_read = Serial1.read();
+      byte2_read = Serial1.read();
+      // Serial.print(byte2_read, HEX);
+      // Serial.print(", ");
+      // Serial.print(byte1_read, HEX);
+      // Serial.println();
+      if (byte1_read == starting_sequence[0] && byte2_read == starting_sequence[1]) {
+        started = 1;
+      }
+    }
   } 
 
   if (i >= BUFFER_MAX) {

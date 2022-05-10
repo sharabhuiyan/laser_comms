@@ -10,6 +10,11 @@ TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
 #define RXD1 9
 #define TXD1 10
+
+byte buf[] = { 0b00000000 };
+byte starting_sequence[] = { 0b1111111, 0b00000000 };
+byte final_padding[] = { 0b00000000, 0b00000000, 0b00000000, 0b00000000 };
+
 /*
 INIT CODE FROM IMAGE DISPLAY
 */
