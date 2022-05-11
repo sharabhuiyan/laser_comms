@@ -73,11 +73,13 @@ def request_handler(request):
         create_database()
         image_ = request['values']['new_image']
         image = load_color_image(f'/var/jail/home/team43/laser_comms/{image_}')
-        data = [get_pixel(image, x, y) for x in range(image['width']) for y in range(image['height'])]
+        data = [get_pixel(image, y, x) for x in range(image['height']) for y in range(image['width'])]
+        #return image['width'], image['height']
         converted_data = rgb565_convert(data)
+        #return len(converted_data)
         data_as_json_str = json.dumps(converted_data)
         insert_into_database(image_,data_as_json_str)
-        send_data = converted_data[0:160]
+        send_data = converted_data[0:32]
         response = {'pixels': send_data}
         return json.dumps(response)
     elif request["method"]=="GET" and 'chunk' in request['values']:
@@ -85,7 +87,7 @@ def request_handler(request):
         data = lookup_database()
         image_name, pixels_list_as_str, upload_time = data[0][0], data[0][1], data[0][2]
         pixels_list = json.loads(pixels_list_as_str)
-        send_data = pixels_list[(chunk*160):(chunk*160)+160]
+        send_data = pixels_list[(chunk*32):((chunk+1)*32)]
         response = {'pixels': send_data}
         return json.dumps(response)
 
